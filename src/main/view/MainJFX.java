@@ -5,12 +5,16 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -18,23 +22,27 @@ import javafx.util.Duration;
 import main.drawables.GameObject;
 import main.drawables.Line;
 import main.drawables.Point;
+import main.utils.ColorCycler;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 public class MainJFX extends Application {
-
-
     private Spinner<Integer> spinner;
+    private Slider slider;
 
-
-    private List<Line> gameObjectLines = new ArrayList<>();
-    private List<Point> gameObjectPoints = new ArrayList<>();
+    private List<GameObject> gameObjectLines = new ArrayList<>();
+    private List<GameObject> gameObjectPoints = new ArrayList<>();
 
     private boolean showLines = true;
     private boolean showPoints = true;
     private boolean showInterpLines = true;
     private boolean showInterpPoints = true;
+
+    private Point dragging = null;
+    private int offsetX = 0;
+    private int offsetY = 0;
     
     private List<Color> colors = new ArrayList<>();
     private int currentColorIndex = 0;
@@ -52,12 +60,10 @@ public class MainJFX extends Application {
     private final Timeline gameLoop;
 
     private boolean pause;
-    private boolean gameOver;
+    private boolean gameOver = true;
 
-    private Point[] points = new Point[6];
-    private Line[] lines = new Line[5];
-    private List<Point> interPoints = new ArrayList<>();
-    private List<Point> interInterPoints = new ArrayList<>();
+    private List<Point> points = new ArrayList<>();
+    private List<Line> lines = new ArrayList<>();
 
     public MainJFX() {
         frameRate=60;
@@ -99,11 +105,7 @@ public class MainJFX extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        //required window setup (adds button + canvases
-        Button startButton = new Button("Play");
-        Button pauseButton = new Button("Pause");
-        Button resetButton = new Button("Reset");
-        Button clearButton = new Button("Clear");
+        //required window setup (adds button + canvases)
 
         CheckBox checkBoxLines = new CheckBox("show lines");
         checkBoxLines.setSelected(true);
@@ -123,10 +125,18 @@ public class MainJFX extends Application {
 
         spinner.setEditable(false);
         spinner.setPrefSize(60,10);
-
         Label spinnerLabel = new Label();
         spinnerLabel.setText("Speed : ");
         spinnerLabel.setLabelFor(spinner);
+
+        slider = new Slider();
+        slider.setBlockIncrement(increment);
+        slider.setMin(0);
+        slider.setMax(1);
+
+        Label sliderLabel = new Label();
+        sliderLabel.setText("Time : ");
+        sliderLabel.setLabelFor(slider);
 
         stage.setResizable(false);
         stage.setTitle("Test?");
@@ -136,12 +146,13 @@ public class MainJFX extends Application {
 
         HBox hBox = new HBox();
         hBox.setSpacing(10);
-        hBox.getChildren().add(startButton);
-        hBox.getChildren().add(pauseButton);
-        hBox.getChildren().add(resetButton);
-        hBox.getChildren().add(clearButton);
+
+        setUpButtonsInHBox(hBox);
+
         hBox.getChildren().add(spinnerLabel);
         hBox.getChildren().add(spinner);
+        hBox.getChildren().add(sliderLabel);
+        hBox.getChildren().add(slider);
         hBox.setLayoutX(0);
         hBox.setLayoutY(800-100);
 
@@ -163,108 +174,131 @@ public class MainJFX extends Application {
         root.getChildren().add(hBox3);
         Scene scene = new Scene(root, 800, 800);
 
-        scene.setFill(Color.DARKGRAY);
+        scene.setFill(Color.WHITE);
+
+        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, mouseEvent -> {
+            if(gameOver) {
+                if(mouseEvent.getSceneX() < cnv.getWidth() && mouseEvent.getSceneY() < cnv.getHeight()) {
+                    for(Point p : points) {
+                        if(p.isWithinBorders((int) mouseEvent.getSceneX(), (int) mouseEvent.getSceneY())) {
+                            this.dragging = p;
+                            this.offsetX =(int) (dragging.getLocation().getX() - mouseEvent.getSceneX());
+                            this.offsetY =(int) (dragging.getLocation().getY() - mouseEvent.getSceneY());
+                            break;
+                        }
+                    }
+                    if(dragging == null) {
+                        points.add(new Point((int) mouseEvent.getSceneX(), (int) mouseEvent.getSceneY()));
+                        gameObjectPoints.add(points.get(points.size() - 1));
+                        this.dragging = points.get(points.size()-1);
+                        addLine();
+                        draw(ctx);
+                    }
+                }
+            }
+        });
+
+        scene.addEventFilter(MouseEvent.MOUSE_DRAGGED, mouseEvent ->  {
+            if(dragging != null && gameOver) {
+                dragging.setLocation(new Point2D(mouseEvent.getSceneX() + offsetX, mouseEvent.getSceneY() + offsetY));
+                repopulateGameObjects();
+                draw(ctx);
+            }
+        });
+
+        scene.addEventFilter(MouseEvent.MOUSE_RELEASED, mouseEvent -> {
+            if(dragging != null && gameOver) {
+                dragging = null;
+                repopulateGameObjects();
+                draw(ctx);
+            }
+        });
+
         stage.setScene(scene);
         stage.show();
 
-        genAllowedColors();
+        colors = ColorCycler.generateListOfColors();
 
-        //add drawable stuff here (Point, line, activePoint)
-        points[0] = new Point(100,100);
-        points[1] = new Point(150,50);
-        points[2] = new Point(160,230);
-        points[3] = new Point(230,400);
-        points[4] = new Point(240,50);
-        points[5] = new Point(300,300);
-        this.draw(layerctx);
-        this.draw(ctx);
 
-        for(int i = 0; i < points.length; i++) {
-            Point p = points[i];
-            p.draw(ctx);
-            if(i > 0) {
-                Line l = new Line(p,points[i-1]);
-                l.setColor(colors.get(currentColorIndex));
-                lines[i-1] = l;
-                l.draw(ctx);
-            }
-        }
         currentColorIndex++;
 
-        startButton.setOnAction(value -> {
-            gameOver = false;
-            pause = false;
-            this.start();
-        });
+        checkBoxLines.setOnAction(value -> showLines = !showLines);
 
-        pauseButton.setOnAction(value -> {
-            if(pause) {
-                pause = false;
-            } else {
-                pause = true;
+        checkBoxPoints.setOnAction(value -> showPoints = !showPoints);
+
+        checkBoxInterpLines.setOnAction(value -> showInterpLines = !showInterpLines);
+
+        checkBoxInterpPoints.setOnAction(value -> showInterpPoints = !showInterpPoints);
+
+        checkBoxBezier.setOnAction(value -> layercnv.setVisible(!layercnv.isVisible()));
+
+        slider.valueProperty().addListener((observableValue, number, t1) -> {
+            if(points.size() > 0) {
+                t = slider.getValue();
+                repopulateGameObjects();
+                currentColorIndex = 1;
+                drawInterpolation(points.toArray(new Point[points.size()]), t);
+                draw(ctx);
             }
         });
+    }
 
-        resetButton.setOnAction(value -> {
-            gameOver = true;
-            t = 0;
-            clear(ctx);
-            clear(layerctx);
-            repopulateGameObjects();
-            draw(ctx);
-        });
+    private void setUpButtonsInHBox(HBox hBox) {
+        setUpButton(new Button("Play"),
+                hBox,
+                event -> {
+                    gameOver = false;
+                    pause = false;
+                    if(points.size() > 0) {
+                        this.start();
+                    }
+                });
 
-        clearButton.setOnAction(value -> {
-            gameOver = true;
-            t = 0;
-            clear(ctx);
-            clear(layerctx);
-            gameObjectLines = new ArrayList<>();
-            gameObjectPoints = new ArrayList<>();
-            points = null;
-            lines = null;
-        });
+        setUpButton(new Button("Pause"),
+                    hBox,
+                    event -> pause = !pause);
 
-        checkBoxLines.setOnAction(value -> {
-            if(showLines) {
-                showLines = false;
-            } else {
-                showLines = true;
-            }
-        });
+        setUpButton(new Button("Reset"),
+                    hBox,
+                    event -> resetCanvas());
 
-        checkBoxPoints.setOnAction(value -> {
-            if(showPoints) {
-                showPoints = false;
-            } else {
-                showPoints = true;
-            }
-        });
+        setUpButton(new Button("Clear"),
+                    hBox,
+                    event -> clearCanvas());
+    }
 
-        checkBoxInterpLines.setOnAction(value -> {
-            if(showInterpLines) {
-                showInterpLines = false;
-            } else {
-                showInterpLines = true;
-            }
-        });
+    private void resetCanvas() {
+        resetCanvasToStartingPosition();
+        repopulateGameObjects();
+        draw(ctx);
+    }
 
-        checkBoxInterpPoints.setOnAction(value -> {
-            if(showInterpPoints) {
-                showInterpPoints = false;
-            } else {
-                showInterpPoints = true;
-            }
-        });
+    private void resetCanvasToStartingPosition() {
+        gameOver = true;
+        t = 0;
+        slider.setValue(t);
+        clear(ctx);
+        clear(layerctx);
+    }
 
-        checkBoxBezier.setOnAction(value -> {
-            if(layercnv.isVisible()) {
-                layercnv.setVisible(false);
-            } else {
-                layercnv.setVisible(true);
-            }
-        });
+    private void clearCanvas() {
+        resetCanvasToStartingPosition();
+        gameObjectLines = new ArrayList<>();
+        gameObjectPoints = new ArrayList<>();
+        points = new ArrayList<>();
+        lines = new ArrayList<>();
+    }
 
+    private void setUpButton(Button b, HBox hBox, EventHandler handler) {
+        hBox.getChildren().add(b);
+        b.setOnAction(handler);
+    }
+
+    private void addLine() {
+        if(points.size() > 1) {
+            lines.add(new Line(points.get(points.size()-1), points.get(points.size()-2)));
+            gameObjectLines.add(lines.get(lines.size()-1));
+        }
     }
 
     private void draw(GraphicsContext ctx) {
@@ -280,6 +314,7 @@ public class MainJFX extends Application {
             }
         }
     }
+
     private void clear(GraphicsContext ctx) {
         ctx.clearRect(0,0,ctx.getCanvas().getWidth(),ctx.getCanvas().getHeight());
     }
@@ -287,8 +322,8 @@ public class MainJFX extends Application {
     private void repopulateGameObjects() {
         gameObjectPoints = new ArrayList<>();
         gameObjectLines = new ArrayList<>();
-        Arrays.stream(points).forEach(p -> gameObjectPoints.add(p));
-        Arrays.stream(lines).forEach(l -> gameObjectLines.add(l));
+        points.forEach(p -> gameObjectPoints.add(p));
+        lines.forEach(l -> gameObjectLines.add(l));
     }
 
     private void update(boolean gameOver) {
@@ -296,8 +331,14 @@ public class MainJFX extends Application {
             t += increment;
             currentColorIndex = 1;
             increment = (double) spinner.getValue() / 1000;
+            slider.setBlockIncrement(increment);
+            slider.increment();
+            if(slider.getValue() != t) {
+                t = slider.getValue();
+            }
             repopulateGameObjects();
-            drawInterpolation(points,t);
+            currentColorIndex = 1;
+            drawInterpolation(points.toArray(new Point[points.size()]),t);
             draw(ctx);
         }
         if(t >= 1) {
@@ -307,16 +348,17 @@ public class MainJFX extends Application {
 
     public void drawInterpolation(Point[] points, double t) {
         if(points.length == 1) {
+            points[0].setSize(2);
+            points[0].setColor(Color.DARKGRAY);
             points[0].draw(layerctx);
         } else {
-            currentColorIndex = getNextColor(currentColorIndex);
+            currentColorIndex = ColorCycler.getNextColorIndex(currentColorIndex, colors);
             Point[] newPoints = new Point[points.length-1];
             for(int i = 0; i < newPoints.length; i++) {
                 newPoints[i] = new Point(interpolatePoint(points[i],points[i+1],t));
                 if(showInterpPoints) {
                     gameObjectPoints.add(newPoints[i]);
                 }
-
                 if(i > 0) {
                     Line l = new Line(newPoints[i],newPoints[i-1]);
                     l.setColor(colors.get(currentColorIndex));
@@ -327,13 +369,6 @@ public class MainJFX extends Application {
             }
             drawInterpolation(newPoints,t);
         }
-    }
-
-    private int getNextColor(int currentColorIndex) {
-        if(currentColorIndex == colors.size() -1) {
-            return 0;
-        }
-        return currentColorIndex + 1;
     }
 
     public Point2D interpolatePoint(Point a, Point b, double t) {
@@ -351,13 +386,5 @@ public class MainJFX extends Application {
 
     public void setGameOver(boolean gameOver) {
         this.gameOver = gameOver;
-    }
-
-    private void genAllowedColors() {
-        colors.add(Color.BLACK);
-        colors.add(Color.BLUE);
-        colors.add(Color.RED);
-        colors.add(Color.PURPLE);
-        colors.add(Color.BEIGE);
     }
 }
