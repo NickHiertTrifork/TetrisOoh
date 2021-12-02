@@ -13,8 +13,6 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -26,7 +24,6 @@ import main.utils.ColorCycler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class MainJFX extends Application {
     private Spinner<Integer> spinner;
@@ -118,26 +115,6 @@ public class MainJFX extends Application {
         CheckBox checkBoxBezier = new CheckBox("Show Bezier curve");
         checkBoxBezier.setSelected(true);
 
-        spinner = new Spinner();
-        SpinnerValueFactory<Integer> valueFactory =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 1);
-        spinner.setValueFactory(valueFactory);
-
-        spinner.setEditable(false);
-        spinner.setPrefSize(60,10);
-        Label spinnerLabel = new Label();
-        spinnerLabel.setText("Speed : ");
-        spinnerLabel.setLabelFor(spinner);
-
-        slider = new Slider();
-        slider.setBlockIncrement(increment);
-        slider.setMin(0);
-        slider.setMax(1);
-
-        Label sliderLabel = new Label();
-        sliderLabel.setText("Time : ");
-        sliderLabel.setLabelFor(slider);
-
         stage.setResizable(false);
         stage.setTitle("Test?");
         Group root = new Group();
@@ -148,11 +125,9 @@ public class MainJFX extends Application {
         hBox.setSpacing(10);
 
         setUpButtonsInHBox(hBox);
+        setUpSpinnerInHBox(hBox);
+        setUpSliderInHBox(hBox);
 
-        hBox.getChildren().add(spinnerLabel);
-        hBox.getChildren().add(spinner);
-        hBox.getChildren().add(sliderLabel);
-        hBox.getChildren().add(slider);
         hBox.setLayoutX(0);
         hBox.setLayoutY(800-100);
 
@@ -231,7 +206,24 @@ public class MainJFX extends Application {
         checkBoxInterpPoints.setOnAction(value -> showInterpPoints = !showInterpPoints);
 
         checkBoxBezier.setOnAction(value -> layercnv.setVisible(!layercnv.isVisible()));
+    }
 
+    private HBox setUpSliderInHBox(HBox hBox) {
+        slider = new Slider();
+        slider.setBlockIncrement(increment);
+        slider.setMin(0);
+        slider.setMax(1);
+
+        addListenerToSlider(slider);
+
+        Label sliderLabel = new Label();
+        sliderLabel.setText("Time : ");
+        sliderLabel.setLabelFor(slider);
+
+        return hBox;
+    }
+
+    private void addListenerToSlider(Slider slider) {
         slider.valueProperty().addListener((observableValue, number, t1) -> {
             if(points.size() > 0) {
                 t = slider.getValue();
@@ -243,7 +235,22 @@ public class MainJFX extends Application {
         });
     }
 
-    private void setUpButtonsInHBox(HBox hBox) {
+    private HBox setUpSpinnerInHBox(HBox hBox) {
+        spinner = new Spinner();
+        SpinnerValueFactory<Integer> valueFactory =
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 1);
+        spinner.setValueFactory(valueFactory);
+
+        spinner.setEditable(false);
+        spinner.setPrefSize(60,10);
+        Label spinnerLabel = new Label();
+        spinnerLabel.setText("Speed : ");
+        spinnerLabel.setLabelFor(spinner);
+
+        return hBox;
+    }
+
+    private HBox setUpButtonsInHBox(HBox hBox) {
         setUpButton(new Button("Play"),
                 hBox,
                 event -> {
@@ -265,6 +272,8 @@ public class MainJFX extends Application {
         setUpButton(new Button("Clear"),
                     hBox,
                     event -> clearCanvas());
+
+        return hBox;
     }
 
     private void resetCanvas() {
