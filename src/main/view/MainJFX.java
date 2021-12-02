@@ -20,6 +20,7 @@ import javafx.util.Duration;
 import main.drawables.GameObject;
 import main.drawables.Line;
 import main.drawables.Point;
+import main.engine.handler.input.MousePressedHandler;
 import main.utils.ColorCycler;
 
 import java.util.ArrayList;
@@ -151,6 +152,8 @@ public class MainJFX extends Application {
 
         scene.setFill(Color.WHITE);
 
+        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, new MousePressedHandler());
+
         scene.addEventFilter(MouseEvent.MOUSE_PRESSED, mouseEvent -> {
             if(gameOver) {
                 if(mouseEvent.getSceneX() < cnv.getWidth() && mouseEvent.getSceneY() < cnv.getHeight()) {
@@ -236,7 +239,7 @@ public class MainJFX extends Application {
     }
 
     private HBox setUpSpinnerInHBox(HBox hBox) {
-        spinner = new Spinner();
+        spinner = new Spinner<>();
         SpinnerValueFactory<Integer> valueFactory =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 1);
         spinner.setValueFactory(valueFactory);
