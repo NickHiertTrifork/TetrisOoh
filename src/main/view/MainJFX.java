@@ -20,7 +20,9 @@ import javafx.util.Duration;
 import main.drawables.GameObject;
 import main.drawables.Line;
 import main.drawables.Point;
+import main.engine.handler.input.MouseDraggedHandler;
 import main.engine.handler.input.MousePressedHandler;
+import main.engine.handler.input.MouseReleasedHandler;
 import main.utils.ColorCycler;
 
 import java.util.ArrayList;
@@ -104,18 +106,6 @@ public class MainJFX extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         //required window setup (adds button + canvases)
-
-        CheckBox checkBoxLines = new CheckBox("show lines");
-        checkBoxLines.setSelected(true);
-        CheckBox checkBoxInterpLines = new CheckBox("show interpolated lines");
-        checkBoxInterpLines.setSelected(true);
-        CheckBox checkBoxPoints = new CheckBox("show points");
-        checkBoxPoints.setSelected(true);
-        CheckBox checkBoxInterpPoints = new CheckBox("show interpolated points");
-        checkBoxInterpPoints.setSelected(true);
-        CheckBox checkBoxBezier = new CheckBox("Show Bezier curve");
-        checkBoxBezier.setSelected(true);
-
         stage.setResizable(false);
         stage.setTitle("Test?");
         Group root = new Group();
@@ -133,15 +123,12 @@ public class MainJFX extends Application {
         hBox.setLayoutY(800-100);
 
         HBox hBox2 = new HBox();
-        hBox2.getChildren().add(checkBoxLines);
-        hBox2.getChildren().add(checkBoxPoints);
-        hBox2.getChildren().add(checkBoxBezier);
+        setUpCheckBoxesToMiddleRow(hBox2);
         hBox2.setLayoutX(0);
         hBox2.setLayoutY(800-50);
 
         HBox hBox3 = new HBox();
-        hBox3.getChildren().add(checkBoxInterpLines);
-        hBox3.getChildren().add(checkBoxInterpPoints);
+        setUpCheckBoxesToBottomRow(hBox3);
         hBox3.setLayoutX(0);
         hBox3.setLayoutY(800 - 25);
 
@@ -152,63 +139,56 @@ public class MainJFX extends Application {
 
         scene.setFill(Color.WHITE);
 
-        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, new MousePressedHandler());
-
-        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, mouseEvent -> {
-            if(gameOver) {
-                if(mouseEvent.getSceneX() < cnv.getWidth() && mouseEvent.getSceneY() < cnv.getHeight()) {
-                    for(Point p : points) {
-                        if(p.isWithinBorders((int) mouseEvent.getSceneX(), (int) mouseEvent.getSceneY())) {
-                            this.dragging = p;
-                            this.offsetX =(int) (dragging.getLocation().getX() - mouseEvent.getSceneX());
-                            this.offsetY =(int) (dragging.getLocation().getY() - mouseEvent.getSceneY());
-                            break;
-                        }
-                    }
-                    if(dragging == null) {
-                        points.add(new Point((int) mouseEvent.getSceneX(), (int) mouseEvent.getSceneY()));
-                        gameObjectPoints.add(points.get(points.size() - 1));
-                        this.dragging = points.get(points.size()-1);
-                        addLine();
-                        draw(ctx);
-                    }
-                }
-            }
-        });
-
-        scene.addEventFilter(MouseEvent.MOUSE_DRAGGED, mouseEvent ->  {
-            if(dragging != null && gameOver) {
-                dragging.setLocation(new Point2D(mouseEvent.getSceneX() + offsetX, mouseEvent.getSceneY() + offsetY));
-                repopulateGameObjects();
-                draw(ctx);
-            }
-        });
-
-        scene.addEventFilter(MouseEvent.MOUSE_RELEASED, mouseEvent -> {
-            if(dragging != null && gameOver) {
-                dragging = null;
-                repopulateGameObjects();
-                draw(ctx);
-            }
-        });
+        scene.addEventFilter(MouseEvent.MOUSE_PRESSED, new MousePressedHandler(this));
+        scene.addEventFilter(MouseEvent.MOUSE_DRAGGED, new MouseDraggedHandler(this));
+        scene.addEventFilter(MouseEvent.MOUSE_RELEASED, new MouseReleasedHandler(this));
 
         stage.setScene(scene);
         stage.show();
 
         colors = ColorCycler.generateListOfColors();
 
-
         currentColorIndex++;
+    }
 
-        checkBoxLines.setOnAction(value -> showLines = !showLines);
+    private HBox setUpCheckBoxesToBottomRow(HBox hBox) {
+        CheckBox checkBoxInterpLines = new CheckBox("show interpolated lines");
+        checkBoxInterpLines.setSelected(true);
 
-        checkBoxPoints.setOnAction(value -> showPoints = !showPoints);
+        CheckBox checkBoxInterpPoints = new CheckBox("show interpolated points");
+        checkBoxInterpPoints.setSelected(true);
 
         checkBoxInterpLines.setOnAction(value -> showInterpLines = !showInterpLines);
 
         checkBoxInterpPoints.setOnAction(value -> showInterpPoints = !showInterpPoints);
 
+        hBox.getChildren().add(checkBoxInterpLines);
+        hBox.getChildren().add(checkBoxInterpPoints);
+
+        return hBox;
+    }
+
+    private HBox setUpCheckBoxesToMiddleRow(HBox hBox) {
+        CheckBox checkBoxLines = new CheckBox("show lines");
+        checkBoxLines.setSelected(true);
+
+        CheckBox checkBoxPoints = new CheckBox("show points");
+        checkBoxPoints.setSelected(true);
+
+        CheckBox checkBoxBezier = new CheckBox("Show Bezier curve");
+        checkBoxBezier.setSelected(true);
+
+        checkBoxLines.setOnAction(value -> showLines = !showLines);
+
+        checkBoxPoints.setOnAction(value -> showPoints = !showPoints);
+
         checkBoxBezier.setOnAction(value -> layercnv.setVisible(!layercnv.isVisible()));
+
+        hBox.getChildren().add(checkBoxLines);
+        hBox.getChildren().add(checkBoxPoints);
+        hBox.getChildren().add(checkBoxBezier);
+
+        return hBox;
     }
 
     private HBox setUpSliderInHBox(HBox hBox) {
@@ -222,6 +202,9 @@ public class MainJFX extends Application {
         Label sliderLabel = new Label();
         sliderLabel.setText("Time : ");
         sliderLabel.setLabelFor(slider);
+
+        hBox.getChildren().add(sliderLabel);
+        hBox.getChildren().add(slider);
 
         return hBox;
     }
@@ -250,7 +233,14 @@ public class MainJFX extends Application {
         spinnerLabel.setText("Speed : ");
         spinnerLabel.setLabelFor(spinner);
 
+        hBox.getChildren().add(spinnerLabel);
+        hBox.getChildren().add(spinner);
         return hBox;
+    }
+
+    private void setUpButton(Button b, HBox hBox, EventHandler handler) {
+        hBox.getChildren().add(b);
+        b.setOnAction(handler);
     }
 
     private HBox setUpButtonsInHBox(HBox hBox) {
@@ -301,19 +291,14 @@ public class MainJFX extends Application {
         lines = new ArrayList<>();
     }
 
-    private void setUpButton(Button b, HBox hBox, EventHandler handler) {
-        hBox.getChildren().add(b);
-        b.setOnAction(handler);
-    }
-
-    private void addLine() {
+    public void addLine() {
         if(points.size() > 1) {
             lines.add(new Line(points.get(points.size()-1), points.get(points.size()-2)));
             gameObjectLines.add(lines.get(lines.size()-1));
         }
     }
 
-    private void draw(GraphicsContext ctx) {
+    public void draw(GraphicsContext ctx) {
         ctx.clearRect(0,0,ctx.getCanvas().getWidth(),ctx.getCanvas().getHeight());
         if(showPoints) {
             for (GameObject g : gameObjectPoints) {
@@ -331,7 +316,7 @@ public class MainJFX extends Application {
         ctx.clearRect(0,0,ctx.getCanvas().getWidth(),ctx.getCanvas().getHeight());
     }
 
-    private void repopulateGameObjects() {
+    public void repopulateGameObjects() {
         gameObjectPoints = new ArrayList<>();
         gameObjectLines = new ArrayList<>();
         points.forEach(p -> gameObjectPoints.add(p));
@@ -388,15 +373,46 @@ public class MainJFX extends Application {
     }
 
     public Point2D interpolatePoint(Point2D a, Point2D b, double t) {
-        Point2D c = b.subtract(a).multiply(t).add(a);
-        return c;
+        return b.subtract(a).multiply(t).add(a);
     }
 
     public void render(GraphicsContext ctx) {
         this.draw(ctx);
     }
 
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
+    public boolean isGameOver() {
+        return this.gameOver;
+    }
+
+    public void setDragging(Point p) {
+        this.dragging = p;
+    }
+
+    public Point getDragging() {
+        return this.dragging;
+    }
+
+    public void setOffsetX(int x) {
+        this.offsetX = x;
+    }
+
+    public int getOffsetX() {
+        return this.offsetX;
+    }
+
+    public void setOffsetY(int y) {
+        this.offsetY = y;
+    }
+
+    public int getOffsetY() {
+        return this.offsetY;
+    }
+
+    public List<Point> getPoints() {
+        return this.points;
+    }
+
+    public List<GameObject> getGameObjectPoints() {
+        return gameObjectPoints;
     }
 }
