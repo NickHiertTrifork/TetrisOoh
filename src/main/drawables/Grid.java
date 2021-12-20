@@ -30,9 +30,7 @@ public class Grid extends GameObject{
     private void createGrid(Dimension2D mapSize) {
         Dimension2D mapSizeInCells = calculateMapSizeInCells(mapSize);
 
-        for(int i = 0; i < mapSizeInCells.getWidth() * mapSizeInCells.getHeight(); i++) {
-
-        }
+        generateNewCellList(grid,0,Cell.getCellSize().getWidth(),Cell.getCellSize().getHeight(),mapSizeInCells.getWidth(), mapSizeInCells.getHeight());
     }
 
     private Dimension2D calculateMapSizeInCells(Dimension2D mapSize) {
@@ -40,5 +38,26 @@ public class Grid extends GameObject{
         double height = mapSize.getHeight() / Cell.getCellSize().getHeight();
 
         return new Dimension2D(width,height);
+    }
+
+    public static List<Cell> generateNewCellList(List<Cell> list, int current,
+                                                 double cellWidth,double cellHeight, double cols, double rows) {
+        double x = cellWidth * current;
+        if(x > cellWidth * cols - 1) {
+            x = cellWidth * (current - (cols * (current / cols)));
+        }
+
+        double y = current / cols * cellHeight;
+        if(y > cellHeight * cols) {
+        }
+
+        Cell cell = new Cell(new Point2D(x,y),new Dimension2D(cellWidth,cellHeight));
+
+        list.add(cell);
+
+        if(current < cols*rows -1) {
+            return generateNewCellList(list, current + 1,cellWidth,cellHeight,cols,rows);
+        }
+        return list;
     }
 }

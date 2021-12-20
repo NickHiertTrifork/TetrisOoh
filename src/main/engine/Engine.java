@@ -68,7 +68,7 @@ public class Engine {
 
         Camera.getInstance();
 
-        Grid grid = new Grid(null,null);
+        gameObjects.add(new Grid(null,new Dimension2D(200,200)));
 
 
 
