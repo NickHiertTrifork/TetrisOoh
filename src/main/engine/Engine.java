@@ -4,16 +4,21 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.Event;
+import javafx.geometry.Dimension2D;
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import main.drawables.GameObject;
+import main.drawables.Grid;
+import main.drawables.entity.unit.Unit;
 import main.drawables.ui.SelectBox;
 import main.engine.handler.input.InputHandler;
 import main.engine.handler.input.MouseHandler;
@@ -27,12 +32,17 @@ public class Engine {
     private Canvas cnv;
     private GraphicsContext ctx;
 
+    private Canvas topLayerCnv;
+    private GraphicsContext topLayerCtx;
+
     private int frameRate;
     private int frameCount;
 
     private Timeline gameLoop;
 
     private Renderer renderer;
+
+    private MouseHandler.MouseOutsideDirection mouseOutsideDirection = MouseHandler.MouseOutsideDirection.INSIDE;
 
     private List<InputHandler> handlers = new ArrayList<>();
 
@@ -41,15 +51,24 @@ public class Engine {
     public Engine(Stage stage) {
         stage.setMaximized(true);
         stage.initStyle(StageStyle.UNDECORATED);
-        cnv = new Canvas(stage.getWidth(), stage.getHeight());
+        cnv = new Canvas(Screen.getPrimary().getBounds().getWidth(), Screen.getPrimary().getBounds().getHeight());
         ctx = cnv.getGraphicsContext2D();
 
-        this.renderer = new Renderer(cnv, ctx);
+        topLayerCnv = new Canvas(Screen.getPrimary().getBounds().getWidth(), Screen.getPrimary().getBounds().getHeight());
+        topLayerCtx = topLayerCnv.getGraphicsContext2D();
 
-        SelectBox selectBox = new SelectBox(25,25,25,25);
+        this.renderer = new Renderer(cnv, ctx, topLayerCnv, topLayerCtx);
+
+        SelectBox selectBox = new SelectBox(new Point2D(0,0), new Dimension2D(0,0));
         gameObjects.add(selectBox);
+        gameObjects.add(new Unit(new Point2D(800,800), new Dimension2D(32,32)));
+        gameObjects.add(new Unit(new Point2D(400,400), new Dimension2D(32,32)));
 
         handlers.add(new MouseHandler(stage, selectBox));
+
+        Camera.getInstance();
+
+        Grid grid = new Grid(null,null);
 
 
 
@@ -76,6 +95,7 @@ public class Engine {
         stage.setTitle("Game Thing");
         Group root = new Group();
         root.getChildren().add(cnv);
+        root.getChildren().add(topLayerCnv);
 
         Scene scene = new Scene(root, x, y);
 
@@ -106,6 +126,9 @@ public class Engine {
 
     private void update() {
 
+        if(!Camera.getInstance().getAction().equals(MouseHandler.MouseOutsideDirection.INSIDE)) {
+            Camera.getInstance().move();
+        }
         renderer.update(gameObjects);
     }
 }

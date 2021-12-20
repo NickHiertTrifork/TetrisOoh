@@ -1,10 +1,11 @@
 package main.engine.handler.input;
 
+import javafx.geometry.Dimension2D;
+import javafx.geometry.Point2D;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import main.drawables.ui.SelectBox;
-
-import java.nio.channels.Pipe;
+import main.engine.Camera;
 
 import static main.engine.handler.input.MouseHandler.MouseOutsideDirection.*;
 
@@ -21,6 +22,8 @@ public class MouseHandler extends InputHandler<MouseEvent> {
     private SelectBox selectBox;
 
     private MouseOutsideDirection outsideDirection = INSIDE;
+
+    private CurrentMouseButton currentMouseButton;
 
 
     public MouseHandler(Stage stage, SelectBox selectBox) {
@@ -60,56 +63,49 @@ public class MouseHandler extends InputHandler<MouseEvent> {
         //      If it's moving back, then scroll the camera.
         //      This handler would need to send something back, or know about Robot / window..
 
-        if(e.getX() <= stage.getX()+2 && e.getY() <= stage.getY()+2) {
+        Camera camera = Camera.getInstance();
+
+        if(e.getX() <= stage.getX()+2 && e.getY() <= stage.getY()) {
             //todo: top left
-            if(!outsideDirection.equals(TOP_LEFT)) {
-                outsideDirection = TOP_LEFT;
-                System.out.println("top left");
+            if(!camera.getAction().equals(TOP_LEFT)) {
+                camera.setAction(TOP_LEFT);
             }
         } else if(e.getX() <= stage.getX()+2 && e.getY() > stage.getY()+2 && e.getY() < stage.getHeight()-2) {
             //todo: left side of stage
-            if(!outsideDirection.equals(LEFT)) {
-                outsideDirection = LEFT;
-                System.out.println("left side");
+            if(!camera.getAction().equals(LEFT)) {
+                camera.setAction(LEFT);
             }
         } else if(e.getX() <= stage.getX()+2 && e.getY() >= stage.getHeight()-2) {
             //todo: bottom left
-            if(!outsideDirection.equals(BOTTOM_LEFT)) {
-                outsideDirection = BOTTOM_LEFT;
-                System.out.println("bottom left");
+            if(!camera.getAction().equals(BOTTOM_LEFT)) {
+                camera.setAction(BOTTOM_LEFT);
             }
         } else if(e.getX() >= stage.getWidth()-2 && e.getY() <= stage.getY()+2) {
             //todo: top right
-            if(!outsideDirection.equals(TOP_RIGHT)) {
-                outsideDirection = TOP_RIGHT;
-                System.out.println("top right");
+            if(!camera.getAction().equals(TOP_RIGHT)) {
+                camera.setAction(TOP_RIGHT);
             }
         } else if(e.getX() >= stage.getWidth()-2 && e.getY() > stage.getY()+2 && e.getY() < stage.getHeight()-2) {
             //todo: right side of stage
-            if(!outsideDirection.equals(RIGHT)) {
-                outsideDirection = RIGHT;
-                System.out.println("right side");
+            if(!camera.getAction().equals(RIGHT)) {
+                camera.setAction(RIGHT);
             }
         } else if(e.getX() >= stage.getWidth()-2 && e.getY() >= stage.getHeight()-2) {
             //todo: bottom right
-            if(!outsideDirection.equals(BOTTOM_RIGHT)) {
-                outsideDirection = BOTTOM_RIGHT;
-                System.out.println("bottom right");
+            if(!camera.getAction().equals(BOTTOM_RIGHT)) {
+                camera.setAction(BOTTOM_RIGHT);
             }
         } else if(e.getX() > stage.getX()+2 && e.getX() < stage.getWidth()-2 && e.getY() <= stage.getY()+2) {
-            if(!outsideDirection.equals(TOP)) {
-                outsideDirection = TOP;
-                System.out.println("top");
+            if(!camera.getAction().equals(TOP)) {
+                camera.setAction(TOP);
             }
         } else if(e.getX() > stage.getX()+2 && e.getX() < stage.getWidth()-2 && e.getY() >= stage.getHeight()-2) {
-            if(!outsideDirection.equals(BOTTOM)) {
-                outsideDirection = BOTTOM;
-                System.out.println("bottom");
+            if(!camera.getAction().equals(BOTTOM)) {
+                camera.setAction(BOTTOM);
             }
         } else {
-            if(!outsideDirection.equals(INSIDE)) {
-                outsideDirection = INSIDE;
-                System.out.println("inside");
+            if(!camera.getAction().equals(INSIDE)) {
+                camera.setAction(INSIDE);
             }
         }
     }
@@ -125,39 +121,81 @@ public class MouseHandler extends InputHandler<MouseEvent> {
 
     private void handleLeftPressed(MouseEvent e) {
         setClickedCoordinates(e);
+        currentMouseButton = CurrentMouseButton.PRIMARY;
         System.out.println("Left clicked at x: " + x + ", y: "+ y );
     }
 
     private void handleRightPressed(MouseEvent e) {
+        currentMouseButton = CurrentMouseButton.SECONDARY;
         System.out.println("Right clicked at x: " + x + ", y: "+ y );
     }
 
     private void handleMiddlePressed(MouseEvent e) {
+        currentMouseButton = CurrentMouseButton.MIDDLE;
         System.out.println("Middle clicked at x: " + x + ", y: "+ y );
     }
 
     private void handleDragged(MouseEvent e) {
 
-        if(e.isPrimaryButtonDown())
+        if(currentMouseButton.equals(CurrentMouseButton.PRIMARY))
             handleLeftDragged(e);
     }
 
     private void handleLeftDragged(MouseEvent e) {
         setCoordinates(e);
 
-        selectBox.setX(xClicked);
-        selectBox.setY(yClicked);
-        selectBox.setWidth(x);
-        selectBox.setHeight(y);
+        updateSelectBox();
 
         System.out.println("Dragging");
     }
 
+    private void updateSelectBox() {
+
+        double tempX;
+        double tempWidth;
+        double tempY;
+        double tempHeight;
+
+        if(x - xClicked > 0) {
+            tempX = xClicked;
+            tempWidth = x - xClicked;
+        } else {
+            tempX = x;
+            tempWidth = xClicked - x;
+        }
+
+        if(y - yClicked > 0) {
+            tempY = yClicked;
+            tempHeight = y - yClicked;
+        } else {
+            tempY = y;
+            tempHeight = yClicked - y;
+        }
+        selectBox.setLocation(new Point2D(tempX,tempY));
+        selectBox.setDimension(new Dimension2D(tempWidth,tempHeight));
+    }
+
     private void handleReleased(MouseEvent e) {
         System.out.println("Released");
+
+        if(currentMouseButton.equals(CurrentMouseButton.PRIMARY))
+            handleLeftReleased(e);
+    }
+
+    private void handleLeftReleased(MouseEvent e) {
+        clearSelectBox();
+    }
+
+    private void clearSelectBox() {
+        selectBox.setLocation(new Point2D(0,0));
+        selectBox.setDimension(new Dimension2D(0,0));
     }
 
     public enum MouseOutsideDirection{
         TOP_LEFT,LEFT,BOTTOM_LEFT,TOP_RIGHT,RIGHT,BOTTOM_RIGHT,TOP,BOTTOM, INSIDE
+    }
+
+    public enum CurrentMouseButton{
+        PRIMARY, SECONDARY, MIDDLE
     }
 }
