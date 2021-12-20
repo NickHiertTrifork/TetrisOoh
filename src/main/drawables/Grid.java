@@ -22,15 +22,23 @@ public class Grid extends GameObject{
 
     @Override
     public void draw(GraphicsContext g, Point2D offset) {
+        g.beginPath();
+        g.setGlobalAlpha(.5);
         for(Cell c: grid) {
             c.draw(g,offset);
         }
+        g.stroke();
     }
 
     private void createGrid(Dimension2D mapSize) {
         Dimension2D mapSizeInCells = calculateMapSizeInCells(mapSize);
 
-        generateNewCellList(grid,0,Cell.getCellSize().getWidth(),Cell.getCellSize().getHeight(),mapSizeInCells.getWidth(), mapSizeInCells.getHeight());
+        generateNewCellList(grid,
+                0,
+                (int)Cell.getCellSize().getWidth(),
+                (int)Cell.getCellSize().getHeight(),
+                (int)mapSizeInCells.getWidth(),
+                (int)mapSizeInCells.getHeight());
     }
 
     private Dimension2D calculateMapSizeInCells(Dimension2D mapSize) {
@@ -41,15 +49,12 @@ public class Grid extends GameObject{
     }
 
     public static List<Cell> generateNewCellList(List<Cell> list, int current,
-                                                 double cellWidth,double cellHeight, double cols, double rows) {
-        double x = cellWidth * current;
-        if(x > cellWidth * cols - 1) {
-            x = cellWidth * (current - (cols * (current / cols)));
+                                                 int cellWidth,int cellHeight, int cols, int rows) {
+        double x = 500 + cellWidth * current;
+        if(x > 500 + cellWidth * rows - 1) {
+            x = 500 + cellWidth * (current - ( rows * (current / rows)));
         }
-
-        double y = current / cols * cellHeight;
-        if(y > cellHeight * cols) {
-        }
+        double y =  500 + current / cols * cellHeight;
 
         Cell cell = new Cell(new Point2D(x,y),new Dimension2D(cellWidth,cellHeight));
 

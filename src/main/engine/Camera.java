@@ -2,6 +2,10 @@ package main.engine;
 
 import javafx.geometry.Point2D;
 import main.engine.handler.input.MouseHandler;
+import main.engine.handler.input.ScrollHandler;
+
+import static java.lang.Math.round;
+import static main.engine.handler.input.ScrollHandler.ZoomAmount.*;
 
 public class Camera {
 
@@ -9,6 +13,8 @@ public class Camera {
     private static Camera instance = null;
     private MouseHandler.MouseOutsideDirection action = MouseHandler.MouseOutsideDirection.INSIDE;
     private double scrollSpeed = 4;
+
+    private double zoomAmount = 1;
 
     public synchronized static Camera getInstance() {
         if(instance == null) {
@@ -34,7 +40,26 @@ public class Camera {
         return action;
     }
 
+    public double getZoomAmount() {
+        return zoomAmount;
+    }
+
+    public void increaseZoomAmount() {
+        if(zoomAmount < 1.5) {
+            zoomAmount = round((zoomAmount + 0.01) * 100.0) / 100.0;
+        }
+        System.out.println(zoomAmount);
+    }
+
+    public void decreaseZoomAmount() {
+        if(zoomAmount > 1) {
+            zoomAmount = round((zoomAmount - 0.01) * 100.0) / 100.0;
+        }
+        System.out.println(zoomAmount);
+    }
+
     public void move() {
+        System.out.println(zoomAmount);
 
         location = switch (action) {
             case TOP -> location.subtract(0,scrollSpeed);
@@ -49,7 +74,5 @@ public class Camera {
         };
         if(location.getX() < 0) location = new Point2D(0, location.getY());
         if(location.getY() < 0) location = new Point2D(location.getX(), 0);
-
-        System.out.println(location);
     }
 }

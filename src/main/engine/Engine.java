@@ -11,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -22,6 +23,7 @@ import main.drawables.entity.unit.Unit;
 import main.drawables.ui.SelectBox;
 import main.engine.handler.input.InputHandler;
 import main.engine.handler.input.MouseHandler;
+import main.engine.handler.input.ScrollHandler;
 import main.engine.renderer.Renderer;
 
 import java.util.ArrayList;
@@ -65,10 +67,11 @@ public class Engine {
         gameObjects.add(new Unit(new Point2D(400,400), new Dimension2D(32,32)));
 
         handlers.add(new MouseHandler(stage, selectBox));
+        handlers.add(new ScrollHandler());
 
         Camera.getInstance();
 
-        gameObjects.add(new Grid(null,new Dimension2D(200,200)));
+        gameObjects.add(new Grid(null,new Dimension2D(1000,1000)));
 
 
 
@@ -104,6 +107,8 @@ public class Engine {
         for(InputHandler handler : handlers) {
             if(handler instanceof MouseHandler) {
                 scene.addEventFilter(MouseEvent.ANY, handler);
+            } else if(handler instanceof ScrollHandler) {
+                scene.addEventFilter(ScrollEvent.ANY, handler);
             }
         }
 

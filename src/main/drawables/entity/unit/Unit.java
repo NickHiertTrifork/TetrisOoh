@@ -14,6 +14,7 @@ public class Unit extends Entity {
 
     @Override
     public void draw(GraphicsContext g, Point2D offset) {
+        g.setGlobalAlpha(1);
         g.fillRect(location.getX() - offset.getX(),location.getY() - offset.getY(), 50, 50);
     }
 

@@ -15,8 +15,7 @@ public class Cell extends GameObject{
 
     @Override
     public void draw(GraphicsContext g, Point2D offset) {
-        g.setFill(Color.GRAY);
-        g.fillRect(location.getX(),location.getY(),dimension.getWidth(), dimension.getHeight());
+        g.rect(location.getX()- offset.getX(),location.getY()-offset.getY(),dimension.getWidth(), dimension.getHeight());
     }
 
     @Override
